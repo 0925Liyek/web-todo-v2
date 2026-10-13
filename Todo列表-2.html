@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo 列表 V2.0 基础版</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
+      color: #1f2937;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 28px 24px 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08),
+                  0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+
+    .app h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .app .subtitle {
+      margin: 0 0 20px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    #todo-input {
+      flex: 1;
+      min-width: 0;
+      height: 42px;
+      padding: 0 14px;
+      font-size: 14px;
+      color: #1f2937;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    #todo-input::placeholder {
+      color: #9ca3af;
+    }
+
+    #todo-input:focus {
+      background: #ffffff;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+
+    #add-btn {
+      height: 42px;
+      padding: 0 20px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #ffffff;
+      background: #6366f1;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s;
+    }
+
+    #add-btn:hover {
+      background: #4f46e5;
+    }
+
+    #add-btn:active {
+      transform: scale(0.97);
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 18px 2px 8px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    #todo-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #todo-list li {
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #374151;
+      background: #f9fafb;
+      border: 1px solid #eef0f3;
+      border-left: 3px solid #6366f1;
+      border-radius: 8px;
+      word-break: break-word;
+      animation: fadeIn 0.18s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .empty-tip {
+      padding: 28px 0;
+      text-align: center;
+      font-size: 13px;
+      color: #9ca3af;
+      border: 1px dashed #e5e7eb;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Todo 列表</h1>
+    <p class="subtitle">V2.0 基础版 · 支持添加与显示</p>
+
+    <div class="input-row">
+      <input id="todo-input" type="text" placeholder="输入待办事项，按回车或点击添加" autocomplete="off">
+      <button id="add-btn" type="button">添加</button>
+    </div>
+
+    <div class="meta">
+      <span>共 <strong id="todo-count">0</strong> 项</span>
+      <span>输入为空 / 重复项会被拦截</span>
+    </div>
+
+    <ul id="todo-list"></ul>
+    <div id="empty-tip" class="empty-tip">暂无待办，先添加一条吧～</div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('todo-input');
+      const addBtn = document.getElementById('add-btn');
+      const list = document.getElementById('todo-list');
+      const countEl = document.getElementById('todo-count');
+      const emptyTip = document.getElementById('empty-tip');
+
+      // 一查执行条件：必要 DOM 元素必须存在
+      if (!input || !addBtn || !list || !countEl || !emptyTip) {
+        console.error('Todo 初始化失败：缺少必要 DOM 元素');
+        return;
+      }
+
+      const todos = [];
+
+      // 渲染列表：使用 createElement + textContent，避免 XSS
+      function render() {
+        list.textContent = '';
+
+        const fragment = document.createDocumentFragment();
+
+        todos.forEach((text) => {
+          const li = document.createElement('li');
+          li.textContent = text;
+          fragment.appendChild(li);
+        });
+
+        list.appendChild(fragment);
+
+        countEl.textContent = String(todos.length);
+        emptyTip.style.display = todos.length === 0 ? 'block' : 'none';
+      }
+
+      // 添加逻辑：trim + 空值拦截 + 重复拦截
+      function addTodo() {
+        const text = input.value.trim();
+
+        if (!text) {
+          alert('请输入内容');
+          input.focus();
+          return;
+        }
+
+        if (todos.includes(text)) {
+          alert('该待办已存在');
+          input.focus();
+          return;
+        }
+
+        todos.push(text);
+        input.value = '';
+        input.focus();
+        render();
+      }
+
+      addBtn.addEventListener('click', addTodo);
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          addTodo();
+        }
+      });
+
+      render();
+    });
+  </script>
+</body>
+</html>
