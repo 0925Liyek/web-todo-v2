@@ -3,147 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Todo 列表 V2.0 基础版</title>
+  <title>Todo 列表 V2.0 数据驱动重构版</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 48px 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                   "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
-      color: #1f2937;
+      margin: 0; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center;
+      padding: 48px 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%); color: #1f2937;
     }
-
     .app {
-      width: 100%;
-      max-width: 480px;
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 28px 24px 24px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08),
-                  0 2px 6px rgba(15, 23, 42, 0.04);
+      width: 100%; max-width: 480px; background: #ffffff; border-radius: 16px; padding: 28px 24px 24px;
+      box-shadow: 0 10px 30px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04);
     }
-
-    .app h1 {
-      margin: 0 0 4px;
-      font-size: 22px;
-      font-weight: 600;
-    }
-
-    .app .subtitle {
-      margin: 0 0 20px;
-      font-size: 13px;
-      color: #6b7280;
-    }
-
-    .input-row {
-      display: flex;
-      gap: 10px;
-    }
-
+    .app h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+    .app .subtitle { margin: 0 0 20px; font-size: 13px; color: #6b7280; }
+    .input-row { display: flex; gap: 10px; }
     #todo-input {
-      flex: 1;
-      min-width: 0;
-      height: 42px;
-      padding: 0 14px;
-      font-size: 14px;
-      color: #1f2937;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      outline: none;
+      flex: 1; min-width: 0; height: 42px; padding: 0 14px; font-size: 14px; color: #1f2937;
+      background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; outline: none;
       transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
     }
-
-    #todo-input::placeholder {
-      color: #9ca3af;
-    }
-
-    #todo-input:focus {
-      background: #ffffff;
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-    }
-
+    #todo-input:focus { background: #ffffff; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
     #add-btn {
-      height: 42px;
-      padding: 0 20px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #ffffff;
-      background: #6366f1;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
+      height: 42px; padding: 0 20px; font-size: 14px; font-weight: 500; color: #ffffff;
+      background: #6366f1; border: none; border-radius: 10px; cursor: pointer;
       transition: background 0.15s, transform 0.05s;
     }
-
-    #add-btn:hover {
-      background: #4f46e5;
-    }
-
-    #add-btn:active {
-      transform: scale(0.97);
-    }
-
-    .meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 18px 2px 8px;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-
-    #todo-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
+    #add-btn:hover { background: #4f46e5; }
+    #add-btn:active { transform: scale(0.97); }
+    .meta { display: flex; justify-content: space-between; align-items: center; margin: 18px 2px 8px; font-size: 12px; color: #9ca3af; }
+    #todo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
     #todo-list li {
-      padding: 12px 14px;
-      font-size: 14px;
-      line-height: 1.5;
-      color: #374151;
-      background: #f9fafb;
-      border: 1px solid #eef0f3;
-      border-left: 3px solid #6366f1;
-      border-radius: 8px;
-      word-break: break-word;
-      animation: fadeIn 0.18s ease-out;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 12px 14px; font-size: 14px; line-height: 1.5; color: #374151;
+      background: #f9fafb; border: 1px solid #eef0f3; border-left: 3px solid #6366f1;
+      border-radius: 8px; cursor: pointer; user-select: none; animation: fadeIn 0.18s ease-out;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to   { opacity: 1; transform: translateY(0); }
+    #todo-list li .text { flex: 1; word-break: break-word; }
+    #todo-list li.done { border-left-color: #9ca3af; background: #f3f4f6; }
+    #todo-list li.done .text { text-decoration: line-through; color: #9ca3af; }
+    .del-btn {
+      width: 28px; height: 28px; flex: 0 0 auto; border: none; border-radius: 6px;
+      background: transparent; color: #9ca3af; font-size: 18px; line-height: 1; cursor: pointer;
     }
-
+    .del-btn:hover { background: #fee2e2; color: #dc2626; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
     .empty-tip {
-      padding: 28px 0;
-      text-align: center;
-      font-size: 13px;
-      color: #9ca3af;
-      border: 1px dashed #e5e7eb;
-      border-radius: 10px;
+      padding: 28px 0; text-align: center; font-size: 13px; color: #9ca3af;
+      border: 1px dashed #e5e7eb; border-radius: 10px;
     }
   </style>
 </head>
 <body>
   <div class="app">
     <h1>Todo 列表</h1>
-    <p class="subtitle">V2.0 基础版 · 支持添加与显示</p>
+    <p class="subtitle">V2.0 数据驱动重构版 · 改数据 → 重渲染</p>
 
     <div class="input-row">
       <input id="todo-input" type="text" placeholder="输入待办事项，按回车或点击添加" autocomplete="off">
@@ -167,33 +81,51 @@
       const countEl = document.getElementById('todo-count');
       const emptyTip = document.getElementById('empty-tip');
 
-      // 一查执行条件：必要 DOM 元素必须存在
       if (!input || !addBtn || !list || !countEl || !emptyTip) {
         console.error('Todo 初始化失败：缺少必要 DOM 元素');
         return;
       }
 
-      const todos = [];
+      // 单一数据源：对象数组
+      let todos = [];
 
-      // 渲染列表：使用 createElement + textContent，避免 XSS
+      // 重渲染：根据 todos 重新画整个列表
       function render() {
         list.textContent = '';
 
         const fragment = document.createDocumentFragment();
 
-        todos.forEach((text) => {
+        todos.forEach(t => {
           const li = document.createElement('li');
-          li.textContent = text;
+          li.dataset.id = t.id;
+          if (t.completed) li.classList.add('done');
+
+          const textSpan = document.createElement('span');
+          textSpan.className = 'text';
+          textSpan.textContent = t.text;
+          li.appendChild(textSpan);
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'del-btn';
+          delBtn.textContent = '×';
+          delBtn.setAttribute('aria-label', '删除');
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止点删除时触发 li 的切换
+            removeTodo(t.id);
+          });
+          li.appendChild(delBtn);
+
+          li.addEventListener('click', () => toggleTodo(t.id));
           fragment.appendChild(li);
         });
 
         list.appendChild(fragment);
-
         countEl.textContent = String(todos.length);
         emptyTip.style.display = todos.length === 0 ? 'block' : 'none';
       }
 
-      // 添加逻辑：trim + 空值拦截 + 重复拦截
+      // 添加：改数据 → 重渲染
       function addTodo() {
         const text = input.value.trim();
 
@@ -203,24 +135,37 @@
           return;
         }
 
-        if (todos.includes(text)) {
+        if (todos.some(t => t.text === text)) {
           alert('该待办已存在');
           input.focus();
           return;
         }
 
-        todos.push(text);
+        const todo = { id: Date.now(), text, completed: false };
+        todos = [...todos, todo];
+        render();
+
         input.value = '';
         input.focus();
+      }
+
+      // 删除：filter 生成新数组 → 重渲染
+      function removeTodo(id) {
+        todos = todos.filter(t => t.id !== id);
+        render();
+      }
+
+      // 切换：map + 展开生成新对象、新数组 → 重渲染
+      function toggleTodo(id) {
+        todos = todos.map(t =>
+          t.id === id ? { ...t, completed: !t.completed } : t
+        );
         render();
       }
 
       addBtn.addEventListener('click', addTodo);
-
       input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          addTodo();
-        }
+        if (event.key === 'Enter') addTodo();
       });
 
       render();
