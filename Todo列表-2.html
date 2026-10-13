@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Todo 列表 V2.0 数据驱动重构版</title>
+  <title>Todo 列表 V2.0 筛选版</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -12,7 +12,7 @@
       background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%); color: #1f2937;
     }
     .app {
-      width: 100%; max-width: 480px; background: #ffffff; border-radius: 16px; padding: 28px 24px 24px;
+      width: 100%; max-width: 520px; background: #ffffff; border-radius: 16px; padding: 28px 24px 24px;
       box-shadow: 0 10px 30px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04);
     }
     .app h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
@@ -32,6 +32,14 @@
     #add-btn:hover { background: #4f46e5; }
     #add-btn:active { transform: scale(0.97); }
     .meta { display: flex; justify-content: space-between; align-items: center; margin: 18px 2px 8px; font-size: 12px; color: #9ca3af; }
+    .filters { display: flex; gap: 8px; margin: 12px 0 12px; }
+    .filters button {
+      flex: 1; height: 34px; border: 1px solid #e5e7eb; border-radius: 8px;
+      background: #f9fafb; color: #4b5563; font-size: 13px; cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .filters button:hover { background: #eef2ff; }
+    .filters button.active { background: #6366f1; border-color: #6366f1; color: #ffffff; }
     #todo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
     #todo-list li {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -57,7 +65,7 @@
 <body>
   <div class="app">
     <h1>Todo 列表</h1>
-    <p class="subtitle">V2.0 数据驱动重构版 · 改数据 → 重渲染</p>
+    <p class="subtitle">V2.0 筛选版 · 数据驱动 + all/active/done</p>
 
     <div class="input-row">
       <input id="todo-input" type="text" placeholder="输入待办事项，按回车或点击添加" autocomplete="off">
@@ -66,7 +74,13 @@
 
     <div class="meta">
       <span>共 <strong id="todo-count">0</strong> 项</span>
-      <span>输入为空 / 重复项会被拦截</span>
+      <span id="filter-tip">当前：全部</span>
+    </div>
+
+    <div class="filters">
+      <button type="button" data-filter="all" class="active">全部</button>
+      <button type="button" data-filter="active">未完成</button>
+      <button type="button" data-filter="done">已完成</button>
     </div>
 
     <ul id="todo-list"></ul>
@@ -80,22 +94,32 @@
       const list = document.getElementById('todo-list');
       const countEl = document.getElementById('todo-count');
       const emptyTip = document.getElementById('empty-tip');
+      const filterTip = document.getElementById('filter-tip');
+      const filterButtons = document.querySelectorAll('[data-filter]');
 
       if (!input || !addBtn || !list || !countEl || !emptyTip) {
         console.error('Todo 初始化失败：缺少必要 DOM 元素');
         return;
       }
 
-      // 单一数据源：对象数组
+      // 单一数据源
       let todos = [];
+      // 视图状态：all / active / done
+      let filter = 'all';
 
-      // 重渲染：根据 todos 重新画整个列表
+      // 重渲染：先按 filter 过滤，再重建整个列表
       function render() {
         list.textContent = '';
 
+        const shown = todos.filter(t => {
+          if (filter === 'active') return !t.completed;
+          if (filter === 'done') return t.completed;
+          return true;
+        });
+
         const fragment = document.createDocumentFragment();
 
-        todos.forEach(t => {
+        shown.forEach(t => {
           const li = document.createElement('li');
           li.dataset.id = t.id;
           if (t.completed) li.classList.add('done');
@@ -111,7 +135,7 @@
           delBtn.textContent = '×';
           delBtn.setAttribute('aria-label', '删除');
           delBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // 防止点删除时触发 li 的切换
+            e.stopPropagation();
             removeTodo(t.id);
           });
           li.appendChild(delBtn);
@@ -122,7 +146,21 @@
 
         list.appendChild(fragment);
         countEl.textContent = String(todos.length);
-        emptyTip.style.display = todos.length === 0 ? 'block' : 'none';
+
+        emptyTip.style.display = shown.length === 0 ? 'block' : 'none';
+        emptyTip.textContent = todos.length === 0
+          ? '暂无待办，先添加一条吧～'
+          : '当前筛选下没有任务';
+
+        if (filterTip) {
+          filterTip.textContent =
+            filter === 'all' ? '当前：全部' :
+            filter === 'active' ? '当前：未完成' : '当前：已完成';
+        }
+
+        filterButtons.forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.filter === filter);
+        });
       }
 
       // 添加：改数据 → 重渲染
@@ -155,7 +193,7 @@
         render();
       }
 
-      // 切换：map + 展开生成新对象、新数组 → 重渲染
+      // 切换：map + 展开 → 重渲染
       function toggleTodo(id) {
         todos = todos.map(t =>
           t.id === id ? { ...t, completed: !t.completed } : t
@@ -163,9 +201,19 @@
         render();
       }
 
+      // 筛选：只改视图状态，不保存
+      function setFilter(f) {
+        filter = f;
+        render();
+      }
+
       addBtn.addEventListener('click', addTodo);
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') addTodo();
+      });
+
+      filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => setFilter(btn.dataset.filter));
       });
 
       render();
